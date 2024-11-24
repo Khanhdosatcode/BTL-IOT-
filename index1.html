@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swipe Records</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <img src="https://via.placeholder.com/30" alt="User Logo" class="rounded-circle">
+                Quản lý xe vào/ra
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="#">Tra cứu</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#">Đăng nhập</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#">Đăng xuất</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Content -->
+    <div class="container my-5">
+        <h1 class="text-center mb-4">Thông tin xe vào/ra</h1>
+
+        <!-- button chup anh -->
+        <h3>Chụp Ảnh với ESP32-CAM</h3>
+        <button id="captureButton">Chụp Ảnh</button>
+        <p id="statusMessage"></p>
+
+        <script>
+            document.getElementById('captureButton').addEventListener('click', async () => {
+                const response = await fetch('/take-picture');
+                const message = await response.text();
+                document.getElementById('statusMessage').innerText = message;
+            });
+        </script>
+
+        <!-- button nhan dien xe -->
+        <h3>Tải Ảnh Nhận Diện Vật Thể</h3>
+        <form id="uploadForm" enctype="multipart/form-data">
+            <input type="file" name="image" accept="image/*" required>
+            <button type="submit">Tải Ảnh</button>
+        </form>
+        <p id="result"></p>
+
+        <script>
+            document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.text();
+                document.getElementById('result').innerText = result;
+            });
+        </script>
+
+        <!-- Trạng thái vị trí đỗ xe -->
+        <h3 class="mb-3">Trạng thái vị trí đỗ xe</h3>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Vị trí</th>
+                    <th>Trạng thái</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Slot 1</td>
+                    <td id="slot1-status">Đang tải...</td>
+                </tr>
+                <tr>
+                    <td>Slot 2</td>
+                    <td id="slot2-status">Đang tải...</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Filter Section -->
+        <div class="row mb-4">
+            <div class="col-md-4"><input type="date" id="filterDate" class="form-control" placeholder="Lọc theo ngày">
+            </div>
+            <div class="col-md-4"><input type="text" id="filterUID" class="form-control" placeholder="Lọc theo CardUID">
+            </div>
+            <div class="col-md-4">
+                <select id="filterVehicleType" class="form-control">
+                    <option value="">Lọc theo loại xe</option>
+                    <option value="Oto">Oto</option>
+                    <option value="Xe may">Xe may</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover" id="swipeTable">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Mã CardUID</th>
+                        <th>Thời gian vào</th>
+                        <th>Thời gian ra</th>
+                        <th>Loại xe</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS and Popper.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Fetch Data and Filter Script -->
+    <script>
+        async function fetchIRStatus() {
+            try {
+                const response = await fetch('/get_ir_status');
+                const data = await response.json();
+
+                // Cập nhật trạng thái vị trí đỗ xe trên giao diện
+                document.getElementById('slot1-status').innerText = data.slot1 || 'N/A';
+                document.getElementById('slot2-status').innerText = data.slot2 || 'N/A';
+            } catch (error) {
+                console.error('Lỗi khi lấy dữ liệu từ server:', error);
+            }
+        }
+
+        // Hàm lấy dữ liệu từ API và hiển thị trong bảng
+        async function fetchSwipeRecords() {
+            try {
+                const response = await fetch('/api/swipe_records');
+                const data = await response.json();
+                displayRecords(data);
+            } catch (error) {
+                console.error('Error fetching swipe records:', error);
+            }
+        }
+
+        function displayRecords(records) {
+            const tableBody = document.querySelector('#swipeTable tbody');
+            tableBody.innerHTML = ''; // Xóa nội dung bảng cũ
+
+            records.forEach(record => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${record.id}</td>
+                    <td>${record.cardUID}</td>
+                    <td>${record.checkInTime || ''}</td>
+                    <td>${record.checkOutTime || ''}</td>
+                    <td>${record.vehicleType || 'N/A'}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Lọc dữ liệu theo bộ lọc
+        function filterRecords(records) {
+            const filterDate = document.getElementById('filterDate').value;
+            const filterUID = document.getElementById('filterUID').value.toLowerCase();
+            const filterVehicleType = document.getElementById('filterVehicleType').value;
+
+            return records.filter(record => {
+                const dateMatch = !filterDate || record.checkInTime.startsWith(filterDate);
+                const uidMatch = !filterUID || record.cardUID.toLowerCase().includes(filterUID);
+                const vehicleTypeMatch = !filterVehicleType || record.vehicleType === filterVehicleType;
+
+                return dateMatch && uidMatch && vehicleTypeMatch;
+            });
+        }
+
+        // Thực hiện lọc và hiển thị lại bảng
+        async function applyFilters() {
+            try {
+                const response = await fetch('/api/swipe_records');
+                const data = await response.json();
+
+                const filteredRecords = filterRecords(data);
+                displayRecords(filteredRecords);
+            } catch (error) {
+                console.error('Error applying filters:', error);
+            }
+        }
+
+        // Gán sự kiện cho các bộ lọc
+        document.getElementById('filterDate').addEventListener('input', applyFilters);
+        document.getElementById('filterUID').addEventListener('input', applyFilters);
+        document.getElementById('filterVehicleType').addEventListener('change', applyFilters);
+
+        // Gọi hàm fetchIRStatus và fetchSwipeRecords khi tải lại trang
+        window.onload = () => {
+            fetchIRStatus();
+            fetchSwipeRecords();
+        };
+    </script>
+    
+
+</body>
+
+</html>

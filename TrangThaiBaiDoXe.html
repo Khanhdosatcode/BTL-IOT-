@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trạng thái Đỗ Xe</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome 6.4.0 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f9;
+        }
+
+        .sidebar {
+            background-color: #343a40;
+            color: white;
+            padding-top: 20px;
+            padding-left: 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 250px;
+            height: 100vh;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 30px;
+        }
+
+        .sidebar a {
+            color: white;
+            text-decoration: none;
+            padding: 12px 20px;
+            display: block;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+
+        .sidebar a:hover {
+            background-color: #495057;
+        }
+
+        .main-content {
+            margin-left: 270px;
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 1100px;
+        }
+
+        h1,
+        h2 {
+            color: #343a40;
+        }
+
+        .table {
+            width: 100%;
+            margin-top: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .table-bordered {
+            border: 1px solid #dee2e6;
+        }
+
+        .table th,
+        .table td {
+            padding: 15px;
+            text-align: center;
+        }
+
+        .slot-cell {
+            background-color: #f8f9fa;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .slot-cell:hover {
+            background-color: #e2e6ea;
+        }
+
+        .slot-cell i {
+            color: #007bff;
+            margin-left: 5px;
+        }
+
+        .slot-cell.occupied {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .slot-cell.available {
+            background-color: #28a745;
+            color: white;
+        }
+
+        hr {
+            border-top: 2px solid #343a40;
+            width: 80%;
+            margin: 20px auto;
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 200px;
+            }
+
+            .main-content {
+                margin-left: 220px;
+            }
+
+            .table td,
+            .table th {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo mb-4">
+            <i class="fa-solid fa-car me-2"></i> Trạng Thái Bãi Đỗ Xe
+        </div>
+        <a href="admin.html" class="text-white text-decoration-none py-2 px-3 d-block">
+            <i class="fa-solid fa-tachometer-alt me-2"></i> Quản lý thông tin vào ra
+        </a>
+        <a href="TrangThaiBaiDoXe.html" class="text-white text-decoration-none py-2 px-3 d-block">
+            <i class="fa-solid fa-tachometer-alt me-2"></i> Trạng Thái Bãi Đỗ Xe
+        </a>
+        <a href="Dieukhienthietbi.html" class="text-white text-decoration-none py-2 px-3 d-block">
+            <i class="fa-solid fa-tachometer-alt me-2"></i> Điều khiển thiết bị
+        </a>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container">
+            <h1 class="mb-4">Quản lý Trạng thái Đỗ Xe</h1>
+            <hr>
+
+            <!-- Vị trí đỗ xe -->
+            <div class="container mt-5">
+                <h2 class="text-center mb-4">Vị Trí Đỗ Xe</h2>
+                <table class="table table-bordered">
+                    <tbody>
+                        <tr>
+                            <td id="slot_1" class="slot-cell" data-slot="1">
+                                Vị trí 1 <i class="fa-solid fa-car"></i>
+                                <button class="btn btn-warning btn-sm mt-2" onclick="editStatus(1)">Sửa Trạng Thái</button>
+                            </td>
+                            <td id="slot_2" class="slot-cell" data-slot="2">
+                                Vị trí 2 <i class="fa-solid fa-car"></i>
+                                <button class="btn btn-warning btn-sm mt-2" onclick="editStatus(2)">Sửa Trạng Thái</button>
+                            </td>
+                            <td id="slot_3" class="slot-cell" data-slot="3">
+                                Vị trí 3 <i class="fa-solid fa-car"></i>
+                                <button class="btn btn-warning btn-sm mt-2" onclick="editStatus(2)">Sửa Trạng Thái</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tạo kết nối WebSocket đến server
+        const socket = new WebSocket('ws://localhost:5000');  // Đổi URL này nếu cần
+
+        // Khi kết nối WebSocket mở thành công
+        socket.onopen = function (event) {
+            console.log('Đã kết nối WebSocket');
+
+            // Gửi yêu cầu để lấy trạng thái ô đỗ xe khi kết nối thành công
+            socket.send(JSON.stringify({ action: 'getSlotsStatus' }));
+        };
+
+        // Khi nhận được dữ liệu từ WebSocket
+        // Khi nhận được dữ liệu từ WebSocket
+        socket.onmessage = function (event) {
+            const data = JSON.parse(event.data);  // Phân tích dữ liệu JSON nhận được từ server
+            console.log('Dữ liệu nhận được từ server:', data);
+            if (data.status === "success") {
+                // Duyệt qua tất cả các ô đỗ xe và cập nhật trạng thái
+                data.slots.forEach(slot => {
+                    const slotId = slot.slotId;  // Số ô đỗ xe (ví dụ: "1")
+                    const status = slot.status;  // Trạng thái ô đỗ xe ("available" hoặc "occupied")
+
+                    // Cập nhật trạng thái của ô đỗ xe trong giao diện
+                    updateSlotStatus(slotId, status);
+                });
+            } else {
+                console.error('Cập nhật không thành công:', data.message);  // Hiển thị lỗi nếu có
+            }
+        };
+
+        // Cập nhật trạng thái ô đỗ xe trong UI
+        function updateSlotStatus(slotId, status) {
+            const slotElement = document.getElementById('slot_' + slotId);  // Lấy phần tử của ô đỗ xe
+            if (slotElement) {
+                // Xóa các lớp trạng thái cũ
+                slotElement.classList.remove('occupied', 'available');
+
+                // Thêm lớp trạng thái mới
+                if (status === 'available') {
+                    slotElement.classList.add('available');
+                } else if (status === 'occupied') {
+                    slotElement.classList.add('occupied');
+                }
+            }
+        }
+
+
+        // Khi gặp lỗi trong kết nối WebSocket
+        socket.onerror = function (event) {
+            console.error('Lỗi kết nối WebSocket:', event);
+        };
+
+        // Khi kết nối WebSocket bị đóng
+        socket.onclose = function (event) {
+            console.log('Kết nối WebSocket đã đóng');
+        };
+
+    </script>
+</body>
+
+</html>

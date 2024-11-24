@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Thông Tin Vào Ra</title>
+
+    <!-- Thư viện CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+    <style>
+        /* Tổng thể */
+        body {
+            font-family: 'Noto Sans Vietnamese', 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 250px;
+            height: 100vh;
+            background-color: #343a40;
+            color: white;
+            padding-top: 20px;
+            overflow-y: auto;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar .logo {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .sidebar a {
+            color: white;
+            text-decoration: none;
+            padding: 12px 20px;
+            display: block;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+
+        .sidebar a:hover {
+            background-color: #495057;
+        }
+
+        /* Nội dung chính */
+        .main-content {
+            margin-left: 250px;
+            padding: 30px;
+        }
+
+        .main-content h1 {
+            font-size: 22px; /* Giảm kích thước tiêu đề chính */
+            margin-bottom: 20px;
+            color: #343a40;
+        }
+
+        .btn-custom {
+            background-color: #007bff;
+            color: white;
+            padding: 8px 15px; /* Giảm padding */
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-custom:hover {
+            background-color: #0056b3;
+        }
+
+        table {
+            width: 100%;
+            margin-top: 20px;
+            background-color: white;
+            border-collapse: collapse;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        table th {
+            background-color: #343a40;
+            color: white;
+        }
+
+        table th,
+        table td {
+            text-align: center;
+            padding: 8px; /* Giảm padding trong bảng */
+        }
+
+        table tr:nth-child(odd) {
+            background-color: #f2f2f2;
+        }
+
+        /* Điều chỉnh kích thước cho phần tiêu đề phụ */
+        .main-content h3 {
+            font-size: 18px; /* Giảm kích thước tiêu đề phụ */
+            margin-top: 20px;
+            color: #343a40;
+        }
+
+        .form-control {
+            font-size: 14px; /* Giảm kích thước input */
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">
+            <i class="fas fa-user"></i> Quản Lý Thông Tin
+        </div>
+        <a href="admin.html"><i class="fas fa-tachometer-alt"></i> Quản Lý Thông Tin Vào Ra</a>
+        <a href="TrangThaiBaiDoXe.html"><i class="fas fa-car"></i> Trạng Thái Bãi Đỗ Xe</a>
+        <a href="Dieukhienthietbi.html"><i class="fas fa-toolbox"></i> Điều Khiển Thiết Bị</a>
+    </div>
+
+    <!-- Nội dung chính -->
+    <div class="main-content">
+        <h1>Quản Lý Xe Vào/Ra</h1>
+
+        <!-- Phần chụp ảnh -->
+        <h3>Chụp Ảnh ESP32-CAM</h3>
+        <button id="captureButton" class="btn-custom">Chụp Ảnh</button>
+        <p id="statusMessage"></p>
+
+        <!-- Phần tải ảnh -->
+        <h3>Tải Ảnh Nhận Diện</h3>
+        <form id="uploadForm">
+            <input type="file" name="image" class="form-control mb-2" required>
+            <button type="submit" class="btn-custom">Tải Ảnh</button>
+        </form>
+        <p id="result"></p>
+
+        <!-- Bộ lọc -->
+        <h3>Bộ Lọc Thông Tin</h3>
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <input type="date" id="filterDate" class="form-control" placeholder="Lọc theo ngày">
+            </div>
+            <div class="col-md-4">
+                <input type="text" id="filterUID" class="form-control" placeholder="Lọc theo CardUID">
+            </div>
+            <div class="col-md-4">
+                <select id="filterVehicleType" class="form-control">
+                    <option value="">Lọc theo loại xe</option>
+                    <option value="Oto">Ô tô</option>
+                    <option value="Xe may">Xe máy</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Bảng thông tin -->
+        <table class="table table-bordered table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Mã Người dùng</th>
+                    <th>Mã chỗ trống</th>
+                    <th>Mã Thẻ</th>
+                    <th>Thời gian vào</th>
+                    <th>Thời gian ra</th>
+                    <th>Tiền Thanh Toán</th>
+                    <th>Loại xe</th>
+                </tr>
+            </thead>
+            <tbody id="vehicleTableBody"></tbody>
+        </table>
+        <button id="updateButton" class="btn-custom">Cập nhật dữ liệu</button>
+    </div>
+
+    <!-- Thư viện JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.min.js"></script>
+    <script>
+        // Khởi tạo kết nối WebSocket
+        const socket = new WebSocket('ws://localhost:5000');
+
+        // Khi kết nối WebSocket thành công
+        socket.onopen = () => {
+            console.log("Đã kết nối WebSocket!");
+        };
+
+        // Khi nhận dữ liệu từ WebSocket server
+        socket.onmessage = (event) => {
+            const invoices = JSON.parse(event.data);  // Dữ liệu nhận từ server dưới dạng JSON
+            console.log("Dữ liệu hóa đơn nhận được:", invoices);
+
+            // Cập nhật bảng thông tin trên giao diện
+            const tableBody = document.getElementById('vehicleTableBody');  // Đảm bảo ID đúng
+            tableBody.innerHTML = '';  // Xóa dữ liệu cũ
+
+            invoices.forEach(invoice => {
+                const row = document.createElement('tr');
+                row.innerHTML = ` 
+                    <td>${invoice['Mã người dùng']}</td>
+                    <td>${invoice['Mã chỗ trống']}</td>
+                    <td>${invoice['Mã RFID']}</td>
+                    <td>${invoice['Giờ vào']}</td>
+                    <td>${invoice['Giờ ra']}</td>
+                    <td>${invoice['Tiền trả']}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        };
+
+        // Khi có lỗi kết nối WebSocket
+        socket.onerror = (error) => {
+            console.error("Lỗi WebSocket:", error);
+        };
+
+        // Khi kết nối WebSocket đóng
+        socket.onclose = () => {
+            console.log("Kết nối WebSocket đã đóng.");
+        };
+        document.getElementById('updateButton').addEventListener('click', () => {
+        const requestData = {
+            action: "fetch_invoices"  // Gửi tín hiệu yêu cầu cập nhật dữ liệu
+        };
+
+        // Gửi yêu cầu JSON qua WebSocket
+        if (socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify(requestData));  // Gửi yêu cầu lấy hóa đơn
+            console.log("Yêu cầu cập nhật dữ liệu đã gửi.");
+        } else {
+            console.error("WebSocket chưa sẵn sàng");
+        }
+    });
+</script>
+
+    <script>
+        // Sự kiện chụp ảnh
+        document.getElementById('captureButton').addEventListener('click', () => {
+            const statusMessage = document.getElementById('statusMessage');
+            statusMessage.innerText = "Đang chụp ảnh...";
+            setTimeout(() => statusMessage.innerText = "Ảnh đã được chụp!", 2000);
+        });
+
+        // Sự kiện tải ảnh
+        document.getElementById('uploadForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+                const result = await response.json();
+                document.getElementById('result').innerText = result.message || 'Tải ảnh thành công!';
+            } catch (error) {
+                document.getElementById('result').innerText = 'Tải ảnh thất bại!';
+            }
+        });
+
+        // Khởi tạo
+        window.onload = fetchIRStatus;
+    </script>
+</body>
+
+</html>
