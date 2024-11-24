@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chụp Ảnh với ESP32-CAM</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Chụp Ảnh với ESP32-CAM</h1>
+    <button id="captureButton">Chụp Ảnh</button>
+    <p id="statusMessage"></p>
+
+    <script>
+        document.getElementById('captureButton').addEventListener('click', async () => {
+            const response = await fetch('/take-picture');
+            const message = await response.text();
+            document.getElementById('statusMessage').innerText = message;
+        });
+    </script>
+</body>
+</html>
