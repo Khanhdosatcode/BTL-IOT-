@@ -1,9 +1,9 @@
 import asyncio
 import json
 import websockets
-import aiomysql  # Dùng aiomysql thay cho mysql.connector
-# import bcrypt
-
+import aiomysql  
+from datetime import datetime
+from decimal import Decimal
 # Danh sách lưu các kết nối WebSocket client web
 esp32_websocket = None
 client_websockets = set()
@@ -34,7 +34,6 @@ class MySQLPool:
         """Trả kết nối về pool."""
         await self.pool.release(connection)
 
-# Khởi tạo connection pool khi ứng dụng bắt đầu
 mysql_pool = MySQLPool()
 
 # Kết nối cơ sở dữ liệu
@@ -43,17 +42,20 @@ async def get_db_connection():
     connection = await mysql_pool.get_connection()
     return connection
 
-# Hàm lấy dữ liệu hóa đơn từ cơ sở dữ liệu
-import aiomysql
-from datetime import datetime
-
-from datetime import datetime
-import aiomysql
-from decimal import Decimal
-
-from datetime import datetime
-import aiomysql
-from decimal import Decimal
+async def create_invoice(user_id, slot_id, pool):
+    """ Hàm tạo hóa đơn cho người dùng và vị trí đỗ xe """
+    try:
+        async with pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cursor:
+                # Tạo hóa đơn mới
+                await cursor.execute("INSERT INTO invoices (user_id, slot_id, date) VALUES (%s, %s, NOW())", 
+                                     (user_id, slot_id))
+                invoice_id = cursor.lastrowid
+                print(f"Hóa đơn đã được tạo với ID: {invoice_id}")
+                return invoice_id
+    except Exception as e:
+        print(f"Lỗi khi tạo hóa đơn: {e}")
+        return None
 
 async def fetch_invoice_data():
     connection = await get_db_connection()
@@ -101,7 +103,6 @@ async def fetch_invoice_data():
             if isinstance(row['Tiền trả'], Decimal):
                 # Chuyển đổi Decimal thành float
                 row['Tiền trả'] = float(row['Tiền trả'])
-
         return result
 
     except aiomysql.MySQLError as e:
@@ -144,9 +145,6 @@ async def check_login(username, password):
 
         if user:
             stored_password, role = user
-            # Nếu có yêu cầu kiểm tra mật khẩu (ví dụ, sử dụng bcrypt)
-            # Nếu bạn không mã hóa mật khẩu, bạn có thể bỏ qua kiểm tra này.
-            # if bcrypt.checkpw(password.encode('utf-8'), stored_password.encode('utf-8')):
             return True, role
 
         # Nếu không tìm thấy người dùng hoặc mật khẩu không đúng
@@ -229,7 +227,47 @@ async def message_received(websocket, message):
                 # Nếu thiếu username hoặc password
                 await websocket.send(json.dumps({"status": "fail", "message": "Username and password are required"}))
                 print("Missing username or password")
+                
+        elif data.get("action") == "reserveSlot":
+            slot_id = data.get("slotId")
+            username = data.get("username")
 
+            if not slot_id or not username:
+                response = {"status": "error", "message": "Thiếu thông tin slotId hoặc username"}
+                await websocket.send(json.dumps(response))
+                return 
+
+                # Truy vấn user_id từ username
+            pool = await get_db_connection()
+            if pool:
+                async with pool.acquire() as conn:
+                    async with conn.cursor(aiomysql.DictCursor) as cursor:
+                        # Truy vấn user_id từ bảng users
+                        await cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
+                        user = await cursor.fetchone()
+                        if user:
+                            user_id = user["id"]
+                                # Gọi hàm tạo hóa đơn
+                            invoice_id = await create_invoice(user_id, slot_id, pool)
+
+                            if invoice_id:
+                                    # Trả về thông tin hóa đơn cho client
+                                response = {
+                                        "status": "success",
+                                        "message": "Đặt chỗ thành công!",
+                                        "invoice": {
+                                            "invoiceId": invoice_id,
+                                            "userId": user_id,
+                                            "slotId": slot_id,
+                                            "date": str(invoice_id)  # hoặc có thể sử dụng thời gian hiện tại
+                                        }
+                                    }
+                            else:
+                                response = {"status": "error", "message": "Không thể tạo hóa đơn"}
+                        else:
+                                response = {"status": "error", "message": "Người dùng không tồn tại"}
+                pool.close()
+                await pool.wait_closed()
 
         # Xử lý các hành động khác như mở/đóng ô đỗ xe, buzzer
         elif data.get("action") in ['open_in', 'close_in', 'open_out', 'close_out', 'buzzer_on', 'buzzer_off']:
