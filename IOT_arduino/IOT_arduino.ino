@@ -1,15 +1,11 @@
 #include <ESP32Servo.h>
 #include <Wire.h>
-#include <LiquidCrystal_I2C.h>
 #include <MFRC522.h>
 #include <WebSocketsClient.h>
 #include <WiFi.h>
 #include <SPI.h>
 
-#define I2C_ADDRESS 0x27
-#define LCD_COLUMNS 16
-#define LCD_ROWS 2
-LiquidCrystal_I2C lcd(I2C_ADDRESS, LCD_COLUMNS, LCD_ROWS);
+
 
 Servo servoIn, servoOut;
 
@@ -32,16 +28,15 @@ MFRC522 mfrc522_OUT(SS_PIN_OUT, RST_PIN_OUT);
 #define fireSensorPin 34
 #define buzzerPin 27
 
-const char* ssid = "Khanh";  // Thay đổi với SSID WiFi của bạn
-const char* password = "khanh111";   // Thay đổi với mật khẩu WiFi của bạn
-IPAddress local_IP(192, 168, 43, 2); // Địa chỉ IP cố định
-IPAddress gateway(192, 168, 43, 1);   // Địa chỉ gateway (router)
-IPAddress subnet(255, 255, 255, 0);   // Địa chỉ subnet
+const char* ssid = "Khanh";  
+const char* password = "khanh111";   
+IPAddress local_IP(192, 168, 43, 2); 
+IPAddress gateway(192, 168, 43, 1);   
+IPAddress subnet(255, 255, 255, 0);   
 int S1 = 0, S2 = 0, S3 = 0;
 int lastS1 = -1, lastS2 = -1, lastS3 = -1; // Biến lưu trạng thái trước đó
 int slot = 3; // Số lượng chỗ trống
 int flag = 1; // Điều khiển cổng ra
-bool carEntered = false; // Xe vào thông qua RFID
 unsigned long servoCloseTime = 0;
 unsigned long fireOpenTime = 0; // Thời gian mở cửa khi có lửa
 bool fireDetected = false; // Cờ báo có lửa
@@ -74,27 +69,27 @@ void onWebSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
             // Phân biệt các loại tin nhắn từ server
             if (message.indexOf("Access granted") >= 0) {
                 Serial.println("Access granted. Opening door...");
-                openDoorIn();  // Mở cửa khi thanh toán thành công
+                openDoorIn();  /
             }
             else if (message.indexOf("Exit registered") >= 0) {
                 Serial.println("User exit registered. Closing door...");
-                openDoorOut();  // Mở cửa khi quét thẻ 
+                openDoorOut();  
             }
             else if (message.indexOf("Slot") >= 0)
             {
                 Serial.println(message);
             }
             else if (message.indexOf("open_in") >= 0) {
-                servoIn.write(0);  // Mở cửa vào
+                servoIn.write(90);  
             }
             else if (message.indexOf("close_in") >= 0) {
-                servoIn.write(90);   // Đóng cửa vào
+                servoIn.write(180);  
             }
             else if (message.indexOf("open_out") >= 0) {
-                servoOut.write(0); // Mở cửa ra
+                servoOut.write(90); 
             }
             else if (message.indexOf("close_out") >= 0) {
-                servoOut.write(90);  // Đóng cửa ra
+                servoOut.write(180);  
             }
             else if (message.indexOf("buzzer_on") >= 0) {
                 digitalWrite(buzzerPin, HIGH); 
@@ -110,10 +105,6 @@ void onWebSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
 void setup() {
     Serial.begin(9600);
     delay(1500);
-    Wire.begin(21, 22);
-    lcd.init();
-    lcd.backlight();
-
     SPI.begin();
     mfrc522_IN.PCD_Init();
     mfrc522_OUT.PCD_Init();
@@ -125,16 +116,10 @@ void setup() {
     pinMode(buzzerPin, OUTPUT);
     digitalWrite(buzzerPin, LOW);
 
-    servoIn.attach(SERVO_IN_PIN);  // Đính kèm servo cửa vào với GPIO đã khai báo
-    servoOut.attach(SERVO_OUT_PIN); // Đính kèm servo cửa ra với GPIO đã khai báo
-    servoIn.write(180); // Đóng cửa vào
-    servoOut.write(180); // Đóng cửa ra
-
-    lcd.setCursor(0, 0);
-    lcd.print("Car Parking Sys");
-    delay(2000);
-    lcd.clear();
-
+    servoIn.attach(SERVO_IN_PIN);  /
+    servoOut.attach(SERVO_OUT_PIN); 
+    servoIn.write(180); 
+    servoOut.write(180); 
     Read_Sensor();
     updateSlotCount();
 
@@ -181,8 +166,8 @@ void loop() {
             fireDetected = true;
             fireOpenTime = millis() + 2000; // Mở cửa trong 5 giây
             digitalWrite(buzzerPin, HIGH);
-            servoIn.write(0);
-            servoOut.write(0);
+            servoIn.write(90);
+            servoOut.write(90);
             Serial.println("Fire detected! Opening gates.");
             StaticJsonDocument<200> doc;
             doc["message"] = "Fire Detected";  // Thông điệp Fire Detected
@@ -289,16 +274,16 @@ String getRFIDCode_IN() {
 String getRFIDCode_OUT() {
   String rfid_code = "";
   for (byte i = 0; i < mfrc522_OUT.uid.size; i++) {
-    rfid_code += String(mfrc522_OUT.uid.uidByte[i], HEX);  // Chuyển mỗi byte thành chuỗi hex
+    rfid_code += String(mfrc522_OUT.uid.uidByte[i], HEX);  
   }
-  rfid_code.toUpperCase();  // Chuyển mã RFID về chữ in hoa
+  rfid_code.toUpperCase();  
   return rfid_code;
 }
 // Hàm mở cửa vào (điều khiển servo)
 void openDoorIn() {
-  servoIn.write(90);  // Mở cửa (servo quay 90 độ, tùy vào vị trí servo của bạn)
-  delay(2000);  // Giữ cửa mở trong 2 giây
-  closeDoorIn();  // Đóng cửa sau 2 giây
+  servoIn.write(90);  
+  delay(2000);  
+  closeDoorIn();  
 }
 
 // Hàm đóng cửa vào
@@ -318,24 +303,20 @@ void closeDoorOut() {
 // Hàm gửi trạng thái cảm biến IR lên WebSocket server nếu có thay đổi
 void sendSensorStatusIfChanged() {
   if (S1 != lastS1) {
-       // Tạo một đối tượng JSON
     StaticJsonDocument<200> doc;
     doc["action"] = "update_slot";
     doc["slot_id"] = 2;
     doc["status"] = (S2 ? "available" : "occupied");
-    // Chuyển đổi đối tượng JSO thành chuỗi
     String message;
     serializeJson(doc, message);
-    lastS1 = S1; // Cập nhật trạng thái cũ
+    lastS1 = S1; 
   }
 
   if (S2 != lastS2) {
-       // Tạo một đối tượng JSON
     StaticJsonDocument<200> doc;
     doc["action"] = "update_slot";
     doc["slot_id"] = 2;
     doc["status"] = (S2 ? "available" : "occupied");
-    // Chuyển đổi đối tượng JSON thành chuỗi
     String message;
     serializeJson(doc, message);
     lastS2 = S2; // Cập nhật trạng thái cũ
@@ -351,7 +332,7 @@ void sendSensorStatusIfChanged() {
     String message;
     serializeJson(doc, message);
     webSocket.sendTXT(message);
-    lastS3 = S3; // Cập nhật trạng thái cũ
+    lastS3 = S3; 
   }
 }
 
@@ -365,13 +346,3 @@ void updateSlotCount() {
     slot = 3 - (S1 + S2 + S3);
 }
 
-void updateLCD() {
-    lcd.setCursor(0, 0); lcd.print("Slots: ");
-    lcd.print(slot);   
-    lcd.print("   ");
-    
-    lcd.setCursor(0, 1);
-    lcd.print(S1 ? "S1: O " : "S1: A ");
-    lcd.print(S2 ? "S2: O " : "S2: A ");
-    lcd.print(S3 ? "S3: O " : "S3: A ");
-}
